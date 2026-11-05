@@ -1,0 +1,91 @@
+
+from urllib.parse import urlparse
+from datetime import datetime
+
+
+class NexusTrust:
+
+    def __init__(self):
+        self.name = "NEXUS TRUST"
+
+        self.trusted_domains = [
+            ".gov", ".edu", ".int",
+            "un.org", "who.int",
+            "worldbank.org",
+            "unesco.org"
+        ]
+
+    def verify_source(self, url):
+
+        if not url:
+            return {
+                "status": "unverified",
+                "score": 0,
+                "reason": "Aucune adresse de source fournie."
+            }
+
+        try:
+            parsed = urlparse(url)
+            domain = parsed.netloc.lower()
+
+            if parsed.scheme != "https":
+                return {
+                    "status": "suspicious",
+                    "score": 10,
+                    "reason": "La connexion HTTPS n'est pas utilisée."
+                }
+
+            if not domain:
+                raise ValueError("Adresse invalide")
+
+            official = any(
+                domain == item or domain.endswith("." + item)
+                for item in self.trusted_domains
+            )
+
+            if official:
+                return {
+                    "status": "recognized_domain",
+                    "score": 70,
+                    "reason": "Domaine institutionnel reconnu."
+                }
+
+            return {
+                "status": "unverified",
+                "score": 30,
+                "reason": "Domaine non encore vérifié."
+            }
+
+        except Exception:
+            return {
+                "status": "invalid",
+                "score": 0,
+                "reason": "Adresse de source invalide."
+            }
+
+    def report(self, sources):
+
+        results = []
+
+        for source in sources:
+            url = source.get("url", "")
+            verification = self.verify_source(url)
+
+            results.append({
+                "title": source.get("title", ""),
+                "url": url,
+                "verification": verification
+            })
+
+        return {
+            "engine": self.name,
+            "checked_at": datetime.utcnow().isoformat() + "Z",
+            "sources": results,
+            "warning": (
+                "Ce contrôle préliminaire ne garantit pas "
+                "l'authenticité ou l'exactitude d'une information."
+            )
+        }
+
+
+nexus_trust = NexusTrust()
